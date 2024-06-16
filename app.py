@@ -35,34 +35,83 @@ async def parse_address(address: str):
 
 async def motd_to_html(motd):
     formatting_map = {
-        "§0": "<span style='color:#000000'>",  # Black
-        "§1": "<span style='color:#0000AA'>",  # Dark Blue
-        "§2": "<span style='color:#00AA00'>",  # Dark Green
-        "§3": "<span style='color:#00AAAA'>",  # Dark Aqua
-        "§4": "<span style='color:#AA0000'>",  # Dark Red
-        "§5": "<span style='color:#AA00AA'>",  # Dark Purple
-        "§6": "<span style='color:#FFAA00'>",  # Gold
-        "§7": "<span style='color:#AAAAAA'>",  # Gray
-        "§8": "<span style='color:#555555'>",  # Dark Gray
-        "§9": "<span style='color:#5555FF'>",  # Blue
-        "§a": "<span style='color:#55FF55'>",  # Green
-        "§b": "<span style='color:#55FFFF'>",  # Aqua
-        "§c": "<span style='color:#FF5555'>",  # Red
-        "§d": "<span style='color:#FF55FF'>",  # Light Purple
-        "§e": "<span style='color:#FFFF55'>",  # Yellow
-        "§f": "<span style='color:#FFFFFF'>",  # White
-        "§l": "<span style='font-weight:bold'>",  # Bold
-        "§o": "<span style='font-style:italic'>",  # Italic
-        "§n": "<span style='text-decoration:underline'>",  # Underline
-        "§m": "<span style='text-decoration:line-through'>",  # Strikethrough
-        "§k": "<span class='motd-obfuscated'>",  # Obfuscated
-        "§r": "</span>"  # Reset
+        "colors": {
+            "0": "<span style='color:#000000!important'>",
+            "1": "<span style='color:#0000AA!important'>",
+            "2": "<span style='color:#00AA00!important'>",
+            "3": "<span style='color:#00AAAA!important'>",
+            "4": "<span style='color:#AA0000!important'>",
+            "5": "<span style='color:#AA00AA!important'>",
+            "6": "<span style='color:#FFAA00!important'>",
+            "7": "<span style='color:#AAAAAA!important'>",
+            "8": "<span style='color:#555555!important'>",
+            "9": "<span style='color:#5555FF!important'>",
+            "a": "<span style='color:#55FF55!important'>",
+            "b": "<span style='color:#55FFFF!important'>",
+            "c": "<span style='color:#FF5555!important'>",
+            "d": "<span style='color:#FF55FF!important'>",
+            "e": "<span style='color:#FFFF55!important'>",
+            "f": "<span style='color:#FFFFFF!important'>",
+        },
+        "styles": {
+            "l": "font-weight:bold;",
+            "o": "font-style:italic;",
+            "n": "text-decoration:underline;",
+            "m": "text-decoration:line-through;",
+            "k": "class='motd-obfuscated';",
+        },
     }
-    for format_code, html_code in formatting_map.items():
-        motd = motd.replace(format_code, html_code)
-    motd = motd.replace("§r", "</span>")
-    motd = motd.replace("\n", "<br>")
-    return motd
+
+    current_html = ""
+    current_color = ""
+    current_styles = []
+
+    i = 0
+    while i < len(motd):
+        if motd[i] == '§':
+            code = motd[i + 1].lower()
+
+            if code in formatting_map["colors"]:
+                # Close all open style spans
+                while current_styles:
+                    current_html += current_styles.pop()
+                # Close previous color span if color is changing
+                if current_color != code:
+                    if current_color:
+                        current_html += "</span>"
+                    current_color = code
+                    current_html += formatting_map["colors"][code]
+                i += 2  # Move past the § and the color code
+                continue
+            elif code in formatting_map["styles"]:
+                style = formatting_map["styles"][code]
+                current_html += f"<span style='{style}'>"
+                current_styles.append("</span>")
+                i += 2  # Move past the § and the style code
+                continue
+            elif code == "r":
+                # Reset all formatting
+                while current_styles:
+                    current_html += current_styles.pop()
+                if current_color:
+                    current_html += "</span>"
+                    current_color = ""
+                i += 2  # Move past the § and the 'r'
+                continue
+
+        current_html += motd[i]
+        i += 1
+
+    # Close any remaining open spans
+    while current_styles:
+        current_html += current_styles.pop()
+    if current_color:
+        current_html += "</span>"
+
+    # Replace new lines with <br>
+    current_html = current_html.replace("\n", "<br>")
+
+    return current_html
 
 async def get_java_status(address: str):
     try:
