@@ -58,7 +58,7 @@ async def motd_to_html(motd):
             "o": "font-style:italic;",
             "n": "text-decoration:underline;",
             "m": "text-decoration:line-through;",
-            "k": "class='motd-obfuscated';",
+            "k": "class='motd-obfuscated'",
         },
     }
 
@@ -85,7 +85,10 @@ async def motd_to_html(motd):
                 continue
             elif code in formatting_map["styles"]:
                 style = formatting_map["styles"][code]
-                current_html += f"<span style='{style}'>"
+                if code == "k":
+                	current_html += f"<span {style}>"
+                else:
+                    current_html += f"<span style='{style}'>"
                 current_styles.append("</span>")
                 i += 2  # Move past the § and the style code
                 continue
