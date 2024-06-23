@@ -102,7 +102,10 @@ async def motd_to_html(motd):
                 i += 2  # Move past the § and the 'r'
                 continue
 
-        current_html += motd[i]
+        if motd[i] == ' ':
+            current_html += '&nbsp;'
+        else:
+            current_html += motd[i]
         i += 1
 
     # Close any remaining open spans
@@ -119,17 +122,23 @@ async def motd_to_html(motd):
 async def get_java_status(address: str):
     try:
         address, port, SRVtarget, SRVport = await parse_address(address)
+
         java_server = JavaServer.lookup(f"{address}:{port}" if port else address)
         java_status = await asyncio.to_thread(java_server.status)
         java_icon = None
-        if hasattr(java_status, 'icon') and java_status.icon:
-            java_icon_base64 = java_status.icon.split(",")[1]
-            java_icon = base64.b64encode(base64.b64decode(java_icon_base64)).decode("utf-8")
+        
+        try:
+            if hasattr(java_status, 'icon') and java_status.icon:
+                java_icon_base64 = java_status.icon.split(",")[1]
+                java_icon = base64.b64encode(base64.b64decode(java_icon_base64)).decode("utf-8")
+        except Exception as e:
+            print(f"Error retrieving server icon: {e}")
+
         player_list = [player.name for player in java_status.players.sample] if java_status.players.sample else []
+
         motd_clean = re.sub(r"\u00A7.", "", java_status.description)
         motd_html = await motd_to_html(java_status.description)
-        if port == None:
-            port = 25565
+        
         return {
             "online": True,
             "host": address,
@@ -149,19 +158,17 @@ async def get_java_status(address: str):
                 "list": player_list
             },
             "motd": {
-                "raw": java_status.description,
+                "raw": "§r" + java_status.description,
                 "clean": motd_clean,
                 "html": motd_html
             },
             "icon": f"data:image/png;base64,{java_icon}" if java_icon else None
         }
     except Exception as e:
-        print(f"Error retrieving Java server status: {e}")
         return {
             "online": False,
             "host": address,
             "port": port,
-            "type": "Java"
         }
 
 async def get_bedrock_status(address: str):
